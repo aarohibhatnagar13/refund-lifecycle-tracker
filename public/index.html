@@ -38,19 +38,19 @@
             const data = await res.json();
             const body = document.getElementById('refund-table-body');
             body.innerHTML = data.map(r => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">#${r.id}</td>
-                    <td class="p-4 font-medium">${r.order_id}</td>
-                    <td class="p-4">$${r.amount}</td>
-                    <td class="p-4">
-                        <span class="px-2 py-1 rounded text-xs font-bold ${getStatusClass(r.current_state)}">
-                            ${r.current_state}
-                        </span>
-                    </td>
-                    <td class="p-4 text-sm text-gray-500">${new Date(r.updated_at).toLocaleString()}</td>
-                </tr>
-            `).join('');
-        }
+    <tr class="border-b hover:bg-gray-50">
+        <td class="p-4">#${r.id}</td>
+        <td class="p-4 font-medium">${r.order_id}</td> <!-- Make sure it has an underscore _ -->
+        <td class="p-4">$${r.amount}</td>
+        <td class="p-4">
+            <span class="px-2 py-1 rounded text-xs font-bold ${getStatusClass(r.current_state)}">
+                ${r.current_state} <!-- Make sure it has an underscore _ -->
+            </span>
+        </td>
+        <td class="p-4 text-sm text-gray-500">${new Date(r.updated_at).toLocaleString()}</td>
+    </tr>
+`).join('');
+}
 
         function getStatusClass(state) {
             switch(state) {

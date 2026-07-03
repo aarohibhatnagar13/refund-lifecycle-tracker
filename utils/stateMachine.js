@@ -5,7 +5,7 @@ const VALID_TRANSITIONS = {
     'PROCESSING': ['CREDITED', 'ESCALATED'],
     'DENIED': [],
     'CREDITED': [],
-    'ESCALATED': []
+    'ESCALATED': ['UNDER_REVIEW'] // <--- Add this to allow moving back
 };
 
 function isValidTransition(fromState, toState, isSystemCall = false) {
