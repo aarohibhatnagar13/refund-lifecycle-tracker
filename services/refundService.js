@@ -1,81 +1,40 @@
-const db = require('../config/db');
-const { isValidTransition } = require('../utils/stateMachine');
-const { InvalidTransitionError, NotFoundError, ConflictError } = require('../utils/errors');
-
-const createRefund = async (orderId, customerId, reason, amount) => {
-    const [result] = await db.query(
-        'INSERT INTO refunds (order_id, customer_id, reason, amount, current_state, version) VALUES (?, ?, ?, ?, "RAISED", 0)',
-        [orderId, customerId, reason, amount]
-    );
-    return result.insertId;
-};
-
-const listRefunds = async (filterState = null) => {
-    let sql = 'SELECT * FROM refunds';
-    const params = [];
-    if (filterState) {
-        sql += ' WHERE current_state = ?';
-        params.push(filterState);
-    }
-    const [rows] = await db.query(sql, params);
-    return rows;
-};
-
-const getRefundWithHistory = async (refundId) => {
-    const [refunds] = await db.query('SELECT * FROM refunds WHERE id = ?', [refundId]);
-    if (refunds.length === 0) throw new NotFoundError('Refund not found');
-
-    const [history] = await db.query(
-        'SELECT * FROM refund_transitions WHERE refund_id = ? ORDER BY changed_at ASC',
+const transitionRefund = async (refundId, newState, changedBy, note, isSystemCall = false) => {
+    // 1. Get current state and version WITHOUT 'FOR UPDATE'
+    // This allows two requests to read the same 'stale' version at the same time
+    const [refunds] = await db.query(
+        'SELECT current_state, version FROM refunds WHERE id = ?', 
         [refundId]
     );
+
+    if (refunds.length === 0) throw new NotFoundError('Refund not found');
     
-    return { ...refunds[0], history };
-};
+    const { current_state: fromState, version: currentVersion } = refunds[0];
 
-const transitionRefund = async (refundId, newState, changedBy, note, isSystemCall = false) => {
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // 1. Get current state and version
-        const [refunds] = await connection.query(
-            'SELECT current_state, version FROM refunds WHERE id = ? FOR UPDATE', 
-            [refundId]
-        );
-        if (refunds.length === 0) throw new NotFoundError('Refund not found');
-        
-        const { current_state: fromState, version: currentVersion } = refunds[0];
-
-        // 2. Validate transition
-        if (!isValidTransition(fromState, newState, isSystemCall)) {
-            throw new InvalidTransitionError(`Cannot move from ${fromState} to ${newState}`);
-        }
-
-        // 3. Update with Optimistic Locking
-        const [updateResult] = await connection.query(
-            'UPDATE refunds SET current_state = ?, version = version + 1, updated_at = NOW() WHERE id = ? AND version = ?',
-            [newState, refundId, currentVersion]
-        );
-
-        if (updateResult.affectedRows === 0) {
-            throw new ConflictError('Version mismatch: Refresh and try again');
-        }
-
-        // 4. Log History
-        await connection.query(
-            'INSERT INTO refund_transitions (refund_id, from_state, to_state, changed_by, note) VALUES (?, ?, ?, ?, ?)',
-            [refundId, fromState, newState, changedBy, note]
-        );
-
-        await connection.commit();
-        return { success: true };
-    } catch (err) {
-        await connection.rollback();
-        throw err;
-    } finally {
-        connection.release();
+    // 2. Validate transition
+    if (!isValidTransition(fromState, newState, isSystemCall)) {
+        throw new InvalidTransitionError(`Cannot move from ${fromState} to ${newState}`);
     }
-};
 
-module.exports = { createRefund, listRefunds, getRefundWithHistory, transitionRefund };
+    // 3. Attempt the Update with the version check
+    // If another request finished between step 1 and step 3, 
+    // the version in the DB will be different, and affectedRows will be 0.
+    const [updateResult] = await db.query(
+        `UPDATE refunds 
+         SET current_state = ?, version = version + 1, updated_at = NOW() 
+         WHERE id = ? AND version = ?`,
+        [newState, refundId, currentVersion]
+    );
+
+    if (updateResult.affectedRows === 0) {
+        // THIS is where the 409 happens now!
+        throw new ConflictError('Version mismatch: This record was updated by someone else.');
+    }
+
+    // 4. Log History (This can be a separate insert)
+    await db.query(
+        'INSERT INTO refund_transitions (refund_id, from_state, to_state, changed_by, note) VALUES (?, ?, ?, ?, ?)',
+        [refundId, fromState, newState, changedBy, note]
+    );
+
+    return { success: true };
+};
