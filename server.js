@@ -1,58 +1,49 @@
 require('dotenv').config();
-console.log("My Port is:", process.env.PORT);
 const express = require('express');
 const cors = require('cors');
-const db = require('./config/db');
-
-require('dotenv').config();
+const refundService = require('./services/refundService');
+const { startSlaChecker, runSlaCheckNow } = require('./jobs/slaChecker'); // 1. Import Job
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Get all refunds
-app.get('/api/refunds', async (req, res) => {
-    try {
-        const [rows] = await db.query('SELECT * FROM refunds');
-        res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
+// Start the background job on boot
+startSlaChecker(); // 2. Start on boot
 
-// Create refund
-app.post('/api/refunds', async (req, res) => {
+const asyncHandler = (fn) => (req, res, next) => 
+    Promise.resolve(fn(req, res, next)).catch(next);
+
+// Existing routes...
+app.get('/api/refunds', asyncHandler(async (req, res) => {
+    const refunds = await refundService.listRefunds(req.query.state);
+    res.json(refunds);
+}));
+
+app.post('/api/refunds', asyncHandler(async (req, res) => {
     const { order_id, customer_id, reason, amount } = req.body;
-    try {
-        const [result] = await db.query(
-            'INSERT INTO refunds (order_id, customer_id, reason, amount) VALUES (?, ?, ?, ?)',
-            [order_id, customer_id, reason, amount]
-        );
-        res.status(201).json({ id: result.insertId });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
+    const id = await refundService.createRefund(order_id, customer_id, reason, amount);
+    res.status(201).json({ id, message: 'Refund Raised' });
+}));
 
-// Update State (with Optimistic Locking)
-app.patch('/api/refunds/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { to_state, current_version, changed_by, note } = req.body;
-    const conn = await db.getConnection();
-    try {
-        await conn.beginTransaction();
-        const [upd] = await conn.query(
-            'UPDATE refunds SET current_state = ?, version = version + 1 WHERE id = ? AND version = ?',
-            [to_state, id, current_version]
-        );
-        if (upd.affectedRows === 0) throw new Error('Update failed: Stale data');
-        
-        await conn.query(
-            'INSERT INTO refund_transitions (refund_id, to_state, changed_by, note) VALUES (?, ?, ?, ?)',
-            [id, to_state, changed_by, note]
-        );
-        await conn.commit();
-        res.json({ success: true });
-    } catch (err) {
-        await conn.rollback();
-        res.status(400).json({ error: err.message });
-    } finally { conn.release(); }
-});
+app.patch('/api/refunds/:id/status', asyncHandler(async (req, res) => {
+    const { to_state, changed_by, note, is_system } = req.body;
+    await refundService.transitionRefund(req.params.id, to_state, changed_by, note, is_system);
+    res.json({ message: 'Transition successful' });
+}));
 
-app.listen(process.env.PORT, () => console.log(`Server on ${process.env.PORT}`));
+// 3. New Dev Route for testing the SLA logic immediately
+app.post('/api/refunds/dev/run-sla-check', asyncHandler(async (req, res) => {
+    const count = await runSlaCheckNow();
+    res.json({ message: 'SLA check completed', escalated_count: count });
+}));
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message });
+});
+app.use(express.static('public'));
+
+
+app.listen(process.env.PORT || 3000, () => console.log('🚀 Server & Job running...'));

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Refund Tracker Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Refund Lifecycle Tracker</h1>
+            <button onclick="runSlaCheck()" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+                ⚡ Run SLA Check
+            </button>
+        </div>
+
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="p-4 font-semibold text-gray-600">ID</th>
+                        <th class="p-4 font-semibold text-gray-600">Order</th>
+                        <th class="p-4 font-semibold text-gray-600">Amount</th>
+                        <th class="p-4 font-semibold text-gray-600">Status</th>
+                        <th class="p-4 font-semibold text-gray-600">Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody id="refund-table-body">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadRefunds() {
+            const res = await fetch('/api/refunds');
+            const data = await res.json();
+            const body = document.getElementById('refund-table-body');
+            body.innerHTML = data.map(r => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">#${r.id}</td>
+                    <td class="p-4 font-medium">${r.order_id}</td>
+                    <td class="p-4">$${r.amount}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${getStatusClass(r.current_state)}">
+                            ${r.current_state}
+                        </span>
+                    </td>
+                    <td class="p-4 text-sm text-gray-500">${new Date(r.updated_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusClass(state) {
+            switch(state) {
+                case 'RAISED': return 'bg-blue-100 text-blue-700';
+                case 'APPROVED': return 'bg-green-100 text-green-700';
+                case 'ESCALATED': return 'bg-red-100 text-red-700';
+                case 'UNDER_REVIEW': return 'bg-yellow-100 text-yellow-700';
+                default: return 'bg-gray-100 text-gray-700';
+            }
+        }
+
+        async function runSlaCheck() {
+            const res = await fetch('/api/refunds/dev/run-sla-check', { method: 'POST' });
+            const data = await res.json();
+            alert(`SLA Check Complete! Escalated ${data.escalated_count} items.`);
+            loadRefunds();
+        }
+
+        loadRefunds();
+        setInterval(loadRefunds, 5000); // Auto-refresh every 5 seconds
+    </script>
+</body>
+</html>
