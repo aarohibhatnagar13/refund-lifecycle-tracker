@@ -1,7 +1,10 @@
+require('dotenv').config();
+console.log("My Port is:", process.env.PORT);
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 const db = require('./config/db');
+
+require('dotenv').config();
 
 const app = express();
 app.use(cors());

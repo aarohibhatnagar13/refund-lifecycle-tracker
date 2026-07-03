@@ -1,0 +1,25 @@
+CREATE DATABASE IF NOT EXISTS refund_tracker;
+USE refund_tracker;
+
+CREATE TABLE refunds (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id VARCHAR(50) NOT NULL,
+    customer_id VARCHAR(50) NOT NULL,
+    reason TEXT,
+    amount DECIMAL(10, 2) NOT NULL,
+    current_state ENUM('RAISED', 'UNDER_REVIEW', 'APPROVED', 'DENIED', 'PROCESSING', 'CREDITED', 'ESCALATED') DEFAULT 'RAISED',
+    version INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE refund_transitions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    refund_id INT NOT NULL,
+    from_state VARCHAR(20),
+    to_state VARCHAR(20) NOT NULL,
+    changed_by VARCHAR(100),
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    note TEXT,
+    FOREIGN KEY (refund_id) REFERENCES refunds(id) ON DELETE CASCADE
+);
