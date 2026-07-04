@@ -43,7 +43,7 @@ const runSlaCheckNow = async () => {
             }
         }
     } catch (err) {
-        console.error('[SLA Job] Critical failure:', err.message);
+        console.error('[SLA Job] Critical failure:', err);
     }
 
     return escalatedCount;
