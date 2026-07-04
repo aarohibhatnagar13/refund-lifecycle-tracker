@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Refund Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header style="display:flex; justify-content: space-between; align-items: center;">
+            <h1>Refund Lifecycle Tracker</h1>
+            <div>
+                <button onclick="toggleForm()" class="secondary">+ New Refund</button>
+                <button onclick="runSlaCheckNow()" style="background:#f97316">⚡ SLA Check</button>
+            </div>
+        </header>
+
+        <div id="refundForm" class="card hidden">
+            <h3>Raise New Refund</h3>
+            <input type="text" id="orderId" placeholder="Order ID (e.g. ORD-101)">
+            <input type="text" id="customerId" placeholder="Customer ID">
+            <select id="reason">
+                <option value="Damaged Goods">Damaged Goods</option>
+                <option value="Late Delivery">Late Delivery</option>
+                <option value="Incorrect Item">Incorrect Item</option>
+            </select>
+            <input type="number" id="amount" placeholder="Amount">
+            <button onclick="submitRefund()">Create Refund</button>
+            <button onclick="toggleForm()" class="secondary">Cancel</button>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody id="refundTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <script type="module" src="/script.js"></script>
+</body>
+</html>
