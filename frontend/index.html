@@ -7,13 +7,37 @@
 </head>
 <body>
     <div class="container">
-        <header style="display:flex; justify-content: space-between; align-items: center;">
-            <h1>Refund Lifecycle Tracker</h1>
+<!-- PROFESSIONAL ADMIN HEADER -->
+        <header style="background: #1e293b; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display:flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <h1 style="margin: 0; font-size: 1.5rem;">Refund Admin Console</h1>
             <div>
-                <button onclick="toggleForm()" class="secondary">+ New Refund</button>
-                <button onclick="runSlaCheckNow()" style="background:#f97316">⚡ SLA Check</button>
+                <button onclick="toggleForm()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">+ Raise Refund</button>
+                <button onclick="runSlaCheckNow()" style="background: #475569; color: white; border: 1px solid #64748b; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Run SLA Audit</button>
             </div>
         </header>
+
+        <!-- PROFESSIONAL ANALYTICS DASHBOARD -->
+        <div class="card" style="display: flex; justify-content: space-around; border-top: 4px solid #2563eb; background-color: white; padding: 25px;">
+            <div style="text-align: center;">
+                <h4 style="margin: 0; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 12px;">Total Value Credited</h4>
+                <!-- Green for successful money transfer -->
+                <h2 id="metricTotal" style="margin: 8px 0; color: #059669; font-size: 28px;">₹0.00</h2> 
+            </div>
+            <div style="border-left: 1px solid #e2e8f0;"></div>
+            <div style="text-align: center;">
+                <h4 style="margin: 0; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 12px;">Primary Issue</h4>
+                <!-- Professional Corporate Blue replacing the Orange -->
+                <h2 id="metricIssue" style="margin: 8px 0; color: #2563eb; font-size: 28px;">Loading...</h2>
+            </div>
+            <div style="border-left: 1px solid #e2e8f0;"></div>
+            <div style="text-align: center;">
+                <h4 style="margin: 0; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 12px;">Action Required</h4>
+                <!-- Red for urgent pending tasks -->
+                <h2 id="metricPending" style="margin: 8px 0; color: #dc2626; font-size: 28px;">0</h2>
+            </div>
+        </div>
+
+
 
         <div id="refundForm" class="card hidden">
             <h3>Raise New Refund</h3>

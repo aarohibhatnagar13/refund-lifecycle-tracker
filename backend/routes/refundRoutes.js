@@ -25,6 +25,19 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/refunds/metrics - Get dashboard analytics
+// MUST be placed before the /:id route!
+router.get('/metrics', async (req, res) => {
+    try {
+        const metrics = await refundService.getMetrics();
+        res.status(200).json(metrics);
+    } catch (err) {
+        console.error("🔥 METRICS ERROR:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // GET /api/refunds/:id - Get detail + transition history
 router.get('/:id', async (req, res) => {
     try {

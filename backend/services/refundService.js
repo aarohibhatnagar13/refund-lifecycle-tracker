@@ -116,9 +116,38 @@ const transitionRefund = async (refundId, newState, changedBy, note, isSystemCal
     }
 };
 
+// 5. Get Analytics Metrics
+const getMetrics = async () => {
+    // Query 1: Total money successfully refunded
+    const [totalRes] = await db.query(
+        "SELECT SUM(amount) as total FROM refunds WHERE current_state = 'CREDITED'"
+    );
+    const totalRefunded = totalRes[0].total || 0;
+
+    // Query 2: The most common reason for a refund
+    const [reasonRes] = await db.query(
+        "SELECT reason, COUNT(*) as count FROM refunds GROUP BY reason ORDER BY count DESC LIMIT 1"
+    );
+    const topIssue = reasonRes.length > 0 ? reasonRes[0].reason : 'N/A';
+
+    // Query 3: Count of refunds that need attention
+    const [pendingRes] = await db.query(
+        "SELECT COUNT(*) as count FROM refunds WHERE current_state IN ('RAISED', 'UNDER_REVIEW', 'ESCALATED')"
+    );
+    const pendingCount = pendingRes[0].count || 0;
+
+    return {
+        totalRefunded: parseFloat(totalRefunded).toFixed(2), // Format to 2 decimal places
+        topIssue,
+        pendingCount
+    };
+};
+
+
 module.exports = {
     createRefund,
     listRefunds,
     getRefundWithHistory,
-    transitionRefund
+    transitionRefund,
+    getMetrics
 };
