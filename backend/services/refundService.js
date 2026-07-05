@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const { InvalidTransitionError, ConflictError, NotFoundError } = require('../utils/errors');
-const { isValidTransition } = require('../utils/statemachine');
+const { isValidTransition } = require('../utils/stateMachine');
 
 // 1. Create a new Refund (Now with Transactions!)
 const createRefund = async (orderId, customerId, reason, amount) => {
