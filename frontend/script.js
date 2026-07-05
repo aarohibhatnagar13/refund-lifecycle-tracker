@@ -7,7 +7,7 @@ const VALID_TRANSITIONS = {
     'PROCESSING': ['CREDITED'],
     'DENIED': [],
     'CREDITED': [],
-    'ESCALATED': []
+    'ESCALATED': ['UNDER_REVIEW'] // <--- THIS IS THE FIX. Now the button will show!
 };
 
 // --- DOM HELPERS ---
@@ -72,18 +72,35 @@ async function initIndex() {
 }
 
 async function submitRefund() {
-    const body = {
-        orderId: document.getElementById('orderId').value,
-        customerId: document.getElementById('customerId').value,
-        reason: document.getElementById('reason').value,
-        amount: document.getElementById('amount').value
-    };
-    await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    location.reload();
+    try {
+        const body = {
+            orderId: document.getElementById('orderId').value,
+            customerId: document.getElementById('customerId').value,
+            reason: document.getElementById('reason').value,
+            amount: document.getElementById('amount').value
+        };
+        
+        // 1. Make the request
+        const res = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        // 2. Check if the backend returned an error (like 500 or 400)
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+        }
+
+        // 3. Reload on success
+        location.reload();
+        
+    } catch (error) {
+        // 4. Show the error to the user!
+        console.error("Submission Error:", error);
+        alert("Failed to create refund: " + error.message);
+    }
 }
 
 async function initDetail() {
@@ -148,6 +165,31 @@ async function simulateRaceCondition() {
     
     statusText.innerHTML = `Req 1: ${res1.status} (${res1.statusText})<br>Req 2: ${res2.status} (${res2.statusText})`;
 }
+async function simulateStripeWebhook() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    
+    // We are pretending to be Stripe's server making a POST request to your API
+    const res = await fetch(`${API_BASE}/webhook/stripe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            refundId: id, 
+            stripeStatus: 'succeeded' 
+        })
+    });
+
+    if (res.ok) {
+        alert("Stripe Webhook received successfully! The bank transferred the money.");
+        location.reload();
+    } else {
+        const err = await res.json();
+        alert("Webhook Failed: " + err.error);
+    }
+}
+
+// Don't forget to expose it to the HTML window!
+window.simulateStripeWebhook = simulateStripeWebhook;
+
 
 // Expose functions to window for HTML inline event handlers
 window.toggleForm = toggleForm;

@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS refund_tracker;
 USE refund_tracker;
 
-CREATE TABLE refunds (
+CREATE TABLE IF NOT EXISTS refunds (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id VARCHAR(50) NOT NULL,
     customer_id VARCHAR(50) NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE refunds (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE refund_transitions (
+CREATE TABLE IF NOT EXISTS refund_transitions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     refund_id INT NOT NULL,
     from_state VARCHAR(20),

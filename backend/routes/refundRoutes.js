@@ -64,5 +64,37 @@ router.patch('/:id/state', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// POST /api/refunds/webhook/stripe - Mock Stripe Webhook
+router.post('/webhook/stripe', async (req, res) => {
+    try {
+        // 1. Stripe sends us a JSON payload. We extract the data.
+        const { refundId, stripeStatus } = req.body;
+
+        console.log(`[WEBHOOK RECEIVED] Stripe says Refund ${refundId} is ${stripeStatus}`);
+
+        // 2. Security Check: In a real app, you verify Stripe's cryptographic signature here.
+        if (stripeStatus !== 'succeeded') {
+            return res.status(400).json({ error: 'Refund failed at bank' });
+        }
+
+        // 3. Automate the transition! Notice 'isSystemCall' is true.
+        await refundService.transitionRefund(
+            refundId, 
+            'CREDITED', // The automated state!
+            'SYSTEM_STRIPE', // changedBy
+            'Webhook received: Payment successfully transferred to bank account.', 
+            true // Yes, this is a system call!
+        );
+
+        // 4. Always return 200 OK fast so Stripe knows we got the message
+        res.status(200).json({ received: true });
+
+    } catch (err) {
+        console.error("[WEBHOOK ERROR]:", err.message);
+        // If the database fails (e.g. version conflict), tell Stripe to try sending the webhook again later
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 module.exports = router;
