@@ -3,7 +3,7 @@ const router = express.Router();
 const refundService = require('../services/refundService');
 const { InvalidTransitionError, ConflictError, NotFoundError } = require('../utils/errors');
 
-// POST /api/refunds - Create a new refund
+// Create a new refund route
 router.post('/', async (req, res) => {
     try {
         const { orderId, customerId, reason, amount } = req.body;
@@ -13,6 +13,7 @@ router.post('/', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // GET /api/refunds - List all refunds (optional filter by state)
 router.get('/', async (req, res) => {
